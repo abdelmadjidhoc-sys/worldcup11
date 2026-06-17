@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #000;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* angled section dividers via clip-path */
+.section-angled {
+  clip-path: polygon(0 40px, 100% 0, 100% calc(100% - 40px), 0 100%);
+  margin: -40px 0;
+  padding: 80px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.section-angled-alt {
+  clip-path: polygon(0 0, 100% 40px, 100% 100%, 0 calc(100% - 40px));
+  margin: -40px 0;
+  padding: 80px 0;
+  position: relative;
+  z-index: 2;
+}
+
+@media (min-width: 768px) {
+  .section-angled {
+    clip-path: polygon(0 60px, 100% 0, 100% calc(100% - 60px), 0 100%);
+    margin: -60px 0;
+    padding: 120px 0;
+  }
+  .section-angled-alt {
+    clip-path: polygon(0 0, 100% 60px, 100% 100%, 0 calc(100% - 60px));
+    margin: -60px 0;
+    padding: 120px 0;
+  }
 }
