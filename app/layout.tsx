@@ -10,10 +10,6 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 export const metadata: Metadata = {
   title: 'World Cup 2026',
   description: 'FIFA World Cup 2026 — Matches, Standings & Bracket',
-  icons: {
-    icon: '/favicon.webp',
-    apple: '/favicon.webp',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
