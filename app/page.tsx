@@ -3,7 +3,6 @@ import MatchCard from '@/components/MatchCard'
 import GroupTable from '@/components/GroupTable'
 import BracketTree from '@/components/BracketTree'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:3000'
 const FOOTBALL_API = 'https://api.football-data.org/v4'
 
 async function getMatches(): Promise<Match[]> {
@@ -37,10 +36,8 @@ async function getStandings(): Promise<Standing[]> {
 export default async function Home() {
   const [allMatches, standings] = await Promise.all([getMatches(), getStandings()])
 
-  const now = new Date()
-
   const upcomingMatches = allMatches
-    .filter(m => m.status === 'SCHEDULED' || m.status === 'LIVE' || m.status === 'IN_PLAY' || m.status === 'PAUSED')
+    .filter(m => ['SCHEDULED', 'LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status))
     .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())
 
   const pastMatches = allMatches
@@ -51,6 +48,7 @@ export default async function Home() {
 
   return (
     <main className="bg-black min-h-screen text-white">
+
       {/* ── HERO ── */}
       <section className="relative bg-black px-6 pt-20 pb-32 md:pt-28 md:pb-48">
         <div className="max-w-5xl mx-auto">
@@ -61,109 +59,84 @@ export default async function Home() {
           <p className="text-lg md:text-2xl text-white/30 mt-6 font-light tracking-wide">
             2026 · USA · Canada · Mexico
           </p>
-          <div className="mt-10 flex gap-6 text-sm">
-            <a href="#upcoming" className="text-white/60 hover:text-white transition-colors tracking-widest uppercase">
-              Upcoming
-            </a>
-            <a href="#results" className="text-white/60 hover:text-white transition-colors tracking-widest uppercase">
-              Results
-            </a>
-            <a href="#groups" className="text-white/60 hover:text-white transition-colors tracking-widest uppercase">
-              Groups
-            </a>
-            <a href="#bracket" className="text-white/60 hover:text-white transition-colors tracking-widest uppercase">
-              Bracket
-            </a>
+          <div className="mt-10 flex flex-wrap gap-6 text-sm">
+            {['upcoming', 'results', 'groups', 'bracket'].map(s => (
+              <a key={s} href={`#${s}`}
+                className="text-white/50 hover:text-white transition-colors tracking-widest uppercase">
+                {s}
+              </a>
+            ))}
           </div>
         </div>
-
-        {/* bottom diagonal */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-white"
-          style={{ clipPath: 'polygon(0 100%, 100% 0, 100% 100%)' }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-white pointer-events-none"
+          style={{ clipPath: 'polygon(0 100%, 100% 0, 100% 100%)' }} />
       </section>
 
       {/* ── UPCOMING MATCHES ── */}
       <section id="upcoming" className="bg-white text-black px-6 pt-20 pb-32 md:pt-28 md:pb-48 relative">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-4 mb-10">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">Upcoming</h2>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase text-black">Upcoming</h2>
             <span className="text-black/30 text-sm tracking-widest uppercase">Matches</span>
           </div>
-
           {upcomingMatches.length === 0 ? (
             <p className="text-black/40 tracking-widest uppercase text-sm">No upcoming matches scheduled</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {upcomingMatches.map(m => (
-                <div key={m.id} className="[&_.border]:border-black/20 [&_.bg-black]:bg-white [&_.text-white]:text-black [&_.text-white\/40]:text-black/40 [&_.text-white\/20]:text-black/20 [&_.text-white\/60]:text-black/60 [&_.border-white\/10]:border-black/10 [&_.border-white\/20]:border-black/20 [&_.border-white\/5]:border-black/5 [&_.bg-white\/5]:bg-black/5 [&_.bg-white\/10]:bg-black/10 [&_.hover\:border-white\/60]:hover:border-black/60 [&_.animate-pulse]:text-black">
-                  <MatchCard match={m} />
-                </div>
+                <MatchCard key={m.id} match={m} variant="light" />
               ))}
             </div>
           )}
         </div>
-
-        {/* bottom diagonal */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-black"
-          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-black pointer-events-none"
+          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }} />
       </section>
 
-      {/* ── PAST MATCHES / RESULTS ── */}
+      {/* ── RESULTS ── */}
       <section id="results" className="bg-black text-white px-6 pt-20 pb-32 md:pt-28 md:pb-48 relative">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-4 mb-10">
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">Results</h2>
             <span className="text-white/30 text-sm tracking-widest uppercase">{pastMatches.length} Played</span>
           </div>
-
           {pastMatches.length === 0 ? (
             <p className="text-white/40 tracking-widest uppercase text-sm">No results yet</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {pastMatches.map(m => (
-                <MatchCard key={m.id} match={m} />
+                <MatchCard key={m.id} match={m} variant="dark" />
               ))}
             </div>
           )}
         </div>
-
-        {/* bottom diagonal */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-white"
-          style={{ clipPath: 'polygon(0 100%, 100% 0, 100% 100%)' }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-white pointer-events-none"
+          style={{ clipPath: 'polygon(0 100%, 100% 0, 100% 100%)' }} />
       </section>
 
       {/* ── GROUP STANDINGS ── */}
       <section id="groups" className="bg-white text-black px-6 pt-20 pb-32 md:pt-28 md:pb-48 relative">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-4 mb-10">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">Groups</h2>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase text-black">Groups</h2>
             <span className="text-black/30 text-sm tracking-widest uppercase">Standings</span>
           </div>
-
           {groupStandings.length === 0 ? (
-            <p className="text-black/40 tracking-widest uppercase text-sm">Standings not available yet</p>
+            <p className="text-black/40 tracking-widest uppercase text-sm">Standings not available</p>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {groupStandings.map((s, i) => (
-                <div key={i} className="[&_.border]:border-black/20 [&_.bg-white\/5]:bg-black/5 [&_.border-white\/20]:border-black/20 [&_.border-white\/10]:border-black/10 [&_.border-white\/5]:border-black/5 [&_.text-white\/40]:text-black/40 [&_.text-white\/60]:text-black/60 [&_.text-white]:text-black">
-                  <GroupTable standing={s} />
-                </div>
+                <GroupTable key={i} standing={s} variant="light" />
               ))}
             </div>
           )}
         </div>
-
-        {/* bottom diagonal */}
-        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-black"
-          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-black pointer-events-none"
+          style={{ clipPath: 'polygon(0 0, 100% 100%, 0 100%)' }} />
       </section>
 
       {/* ── BRACKET ── */}
-      <section id="bracket" className="bg-black text-white px-6 pt-20 pb-32 md:pt-28 md:pb-32 relative">
+      <section id="bracket" className="bg-black text-white px-6 pt-20 pb-24 md:pt-28 md:pb-32">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-baseline gap-4 mb-10">
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">Bracket</h2>

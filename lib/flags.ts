@@ -1,0 +1,58 @@
+// TLA → ISO 3166-1 alpha-2 code for flagcdn.com
+// All 48 FIFA World Cup 2026 teams
+export const TLA_TO_ISO: Record<string, string> = {
+  ALG: 'dz',
+  ARG: 'ar',
+  AUS: 'au',
+  AUT: 'at',
+  BEL: 'be',
+  BIH: 'ba',
+  BRA: 'br',
+  CAN: 'ca',
+  CIV: 'ci',
+  COD: 'cd',
+  COL: 'co',
+  CPV: 'cv',
+  CRO: 'hr',
+  CUW: 'cw',
+  CZE: 'cz',
+  ECU: 'ec',
+  EGY: 'eg',
+  ENG: 'gb-eng',
+  ESP: 'es',
+  FRA: 'fr',
+  GER: 'de',
+  GHA: 'gh',
+  HAI: 'ht',
+  IRN: 'ir',
+  IRQ: 'iq',
+  JOR: 'jo',
+  JPN: 'jp',
+  KOR: 'kr',
+  KSA: 'sa',
+  MAR: 'ma',
+  MEX: 'mx',
+  NED: 'nl',
+  NOR: 'no',
+  NZL: 'nz',
+  PAN: 'pa',
+  PAR: 'py',
+  POR: 'pt',
+  QAT: 'qa',
+  RSA: 'za',
+  SCO: 'gb-sct',
+  SEN: 'sn',
+  SUI: 'ch',
+  SWE: 'se',
+  TUN: 'tn',
+  TUR: 'tr',
+  URU: 'uy',
+  USA: 'us',
+  UZB: 'uz',
+}
+
+export function flagUrl(tla: string, width: 20 | 40 = 20): string {
+  const iso = TLA_TO_ISO[tla]
+  if (!iso) return ''
+  return `https://flagcdn.com/w${width}/${iso}.png`
+}

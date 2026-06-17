@@ -1,15 +1,19 @@
 'use client'
 
+import Image from 'next/image'
 import { Match } from '@/lib/types'
+import { flagUrl } from '@/lib/flags'
 
 function formatDate(utcDate: string) {
-  const d = new Date(utcDate)
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  return new Date(utcDate).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  })
 }
 
 function formatTime(utcDate: string) {
-  const d = new Date(utcDate)
-  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' })
+  return new Date(utcDate).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+  })
 }
 
 function stageLabel(stage: string, group: string | null) {
@@ -19,69 +23,98 @@ function stageLabel(stage: string, group: string | null) {
 
 interface Props {
   match: Match
+  variant?: 'dark' | 'light'
 }
 
-export default function MatchCard({ match }: Props) {
+export default function MatchCard({ match, variant = 'dark' }: Props) {
+  const light = variant === 'light'
+
+  const border = light ? 'border-black/15' : 'border-white/20'
+  const bg = light ? 'bg-white hover:border-black/40' : 'bg-black hover:border-white/60'
+  const headerBorder = light ? 'border-black/10' : 'border-white/10'
+  const mutedText = light ? 'text-black/40' : 'text-white/40'
+  const mainText = light ? 'text-black' : 'text-white'
+  const divider = light ? 'text-black/20' : 'text-white/20'
+  const liveText = light ? 'text-black animate-pulse' : 'text-white animate-pulse'
+  const winnerText = light ? 'text-black' : 'text-white'
+  const loserText = light ? 'text-black/35' : 'text-white/40'
+
   const isFinished = match.status === 'FINISHED'
   const isLive = match.status === 'IN_PLAY' || match.status === 'LIVE' || match.status === 'PAUSED'
   const homeScore = match.score.fullTime.home
   const awayScore = match.score.fullTime.away
+  const homeFlag = flagUrl(match.homeTeam.tla, 40)
+  const awayFlag = flagUrl(match.awayTeam.tla, 40)
 
   return (
-    <div className="border border-white/20 bg-black hover:border-white/60 transition-colors duration-200 group">
-      {/* header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-        <span className="text-xs tracking-widest uppercase text-white/40">
+    <div className={`border ${border} ${bg} transition-colors duration-200`}>
+      {/* header row */}
+      <div className={`flex items-center justify-between px-4 py-2 border-b ${headerBorder}`}>
+        <span className={`text-xs tracking-widest uppercase ${mutedText}`}>
           {stageLabel(match.stage, match.group)}
         </span>
-        {isLive && (
-          <span className="text-xs tracking-widest uppercase text-white animate-pulse">Live</span>
-        )}
+        {isLive && <span className={`text-xs tracking-widest uppercase ${liveText}`}>Live</span>}
         {!isLive && !isFinished && (
-          <span className="text-xs text-white/40">
-            {formatDate(match.utcDate)}
-          </span>
+          <span className={`text-xs ${mutedText}`}>{formatDate(match.utcDate)}</span>
         )}
         {isFinished && (
-          <span className="text-xs tracking-widest uppercase text-white/40">FT</span>
+          <span className={`text-xs tracking-widest uppercase ${mutedText}`}>FT</span>
         )}
       </div>
 
       {/* teams + score */}
-      <div className="px-4 py-5 flex items-center gap-4">
-        {/* home */}
-        <div className="flex-1 text-right">
-          <p className="text-lg font-black tracking-tight uppercase leading-none">
+      <div className="px-4 py-4 flex items-center gap-3">
+        {/* home team */}
+        <div className="flex-1 flex flex-col items-end gap-1.5 min-w-0">
+          {homeFlag && (
+            <Image
+              src={homeFlag}
+              alt={match.homeTeam.name}
+              width={32}
+              height={22}
+              className="object-cover shadow-sm"
+              unoptimized
+            />
+          )}
+          <p className={`text-sm font-black tracking-tight uppercase leading-none ${mainText}`}>
             {match.homeTeam.tla}
           </p>
-          <p className="text-xs text-white/40 mt-1 truncate">{match.homeTeam.name}</p>
+          <p className={`text-[10px] ${mutedText} truncate max-w-full`}>{match.homeTeam.shortName}</p>
         </div>
 
         {/* score / time */}
-        <div className="flex-shrink-0 w-24 text-center">
+        <div className="flex-shrink-0 w-20 text-center">
           {isFinished || isLive ? (
-            <div className="flex items-center justify-center gap-2">
-              <span className={`text-3xl font-black tabular-nums ${match.score.winner === 'HOME_TEAM' ? 'text-white' : 'text-white/40'}`}>
+            <div className="flex items-center justify-center gap-1.5">
+              <span className={`text-2xl font-black tabular-nums ${match.score.winner === 'HOME_TEAM' ? winnerText : loserText}`}>
                 {homeScore ?? 0}
               </span>
-              <span className="text-white/20 text-xl">—</span>
-              <span className={`text-3xl font-black tabular-nums ${match.score.winner === 'AWAY_TEAM' ? 'text-white' : 'text-white/40'}`}>
+              <span className={`${divider} text-lg`}>—</span>
+              <span className={`text-2xl font-black tabular-nums ${match.score.winner === 'AWAY_TEAM' ? winnerText : loserText}`}>
                 {awayScore ?? 0}
               </span>
             </div>
           ) : (
-            <div>
-              <p className="text-base font-bold tabular-nums">{formatTime(match.utcDate)}</p>
-            </div>
+            <p className={`text-sm font-bold tabular-nums ${mainText}`}>{formatTime(match.utcDate)}</p>
           )}
         </div>
 
-        {/* away */}
-        <div className="flex-1 text-left">
-          <p className="text-lg font-black tracking-tight uppercase leading-none">
+        {/* away team */}
+        <div className="flex-1 flex flex-col items-start gap-1.5 min-w-0">
+          {awayFlag && (
+            <Image
+              src={awayFlag}
+              alt={match.awayTeam.name}
+              width={32}
+              height={22}
+              className="object-cover shadow-sm"
+              unoptimized
+            />
+          )}
+          <p className={`text-sm font-black tracking-tight uppercase leading-none ${mainText}`}>
             {match.awayTeam.tla}
           </p>
-          <p className="text-xs text-white/40 mt-1 truncate">{match.awayTeam.name}</p>
+          <p className={`text-[10px] ${mutedText} truncate max-w-full`}>{match.awayTeam.shortName}</p>
         </div>
       </div>
     </div>
