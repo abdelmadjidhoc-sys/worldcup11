@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 
 const API_BASE = 'https://api.football-data.org/v4'
-const REVALIDATE = 3600 // teams change rarely
 
-export const revalidate = REVALIDATE
+export const revalidate = 3600
 
 export async function GET() {
   const res = await fetch(`${API_BASE}/competitions/WC/teams`, {
     headers: { 'X-Auth-Token': process.env.FOOTBALL_API_KEY! },
-    next: { revalidate: REVALIDATE },
+    next: { revalidate: 3600 },
   })
 
   if (!res.ok) {
