@@ -1,10 +1,12 @@
 'use client'
 
+import Image from 'next/image'
 import { Match } from '@/lib/types'
+import { flagUrl } from '@/lib/flags'
 
 const KNOCKOUT_STAGES = [
-  'ROUND_OF_32',
-  'ROUND_OF_16',
+  'LAST_32',
+  'LAST_16',
   'QUARTER_FINALS',
   'SEMI_FINALS',
   'THIRD_PLACE',
@@ -12,12 +14,62 @@ const KNOCKOUT_STAGES = [
 ]
 
 const STAGE_LABELS: Record<string, string> = {
-  ROUND_OF_32: 'Round of 32',
-  ROUND_OF_16: 'Round of 16',
-  QUARTER_FINALS: 'Quarter Finals',
-  SEMI_FINALS: 'Semi Finals',
-  THIRD_PLACE: '3rd Place',
-  FINAL: 'Final',
+  LAST_32:       'Round of 32',
+  LAST_16:       'Round of 16',
+  QUARTER_FINALS:'Quarter Finals',
+  SEMI_FINALS:   'Semi Finals',
+  THIRD_PLACE:   '3rd Place',
+  FINAL:         'Final',
+}
+
+interface TeamRowProps {
+  tla:       string | null
+  name:      string | null
+  score:     number | null
+  won:       boolean
+  finished:  boolean
+}
+
+function TeamRow({ tla, name, score, won, finished }: TeamRowProps) {
+  const flag = tla ? flagUrl(tla, 20) : null
+  const displayName = name ?? (tla ?? 'TBD')
+
+  return (
+    <div className={`flex items-center justify-between px-3 py-2.5 gap-3 ${won ? 'bg-white/10' : ''}`}>
+      <div className="flex items-center gap-2 min-w-0">
+        {/* flag or white placeholder */}
+        {flag ? (
+          <Image
+            src={flag}
+            alt={displayName}
+            width={20}
+            height={14}
+            className="object-cover flex-shrink-0"
+            unoptimized
+          />
+        ) : (
+          <span className="w-5 h-3.5 flex-shrink-0 border border-white/20 bg-white/5 rounded-[1px]" />
+        )}
+
+        <div className="min-w-0">
+          {tla ? (
+            <>
+              <span className="text-xs font-black uppercase tracking-wide">{tla}</span>
+              <span className="text-[10px] text-white/40 ml-1.5 hidden sm:inline truncate">{name ?? ''}</span>
+            </>
+          ) : (
+            <span className="text-xs text-white/30 tracking-widest uppercase">TBD</span>
+          )}
+        </div>
+      </div>
+
+      {finished && (
+        <span className={`text-sm font-black tabular-nums flex-shrink-0 ${won ? 'text-white' : 'text-white/35'}`}>
+          {score ?? 0}
+        </span>
+      )}
+    </div>
+  )
 }
 
 interface BracketMatchProps {
@@ -30,27 +82,22 @@ function BracketMatch({ match }: BracketMatchProps) {
   const awayWon = match.score.winner === 'AWAY_TEAM'
 
   return (
-    <div className="border border-white/20 min-w-[180px]">
-      <div className={`flex items-center justify-between px-3 py-2 border-b border-white/10 ${homeWon ? 'bg-white/10' : ''}`}>
-        <span className="text-xs font-bold uppercase tracking-wide truncate max-w-[110px]">
-          {match.homeTeam.tla || '?'}
-        </span>
-        {isFinished && (
-          <span className={`text-sm font-black tabular-nums ml-2 ${homeWon ? 'text-white' : 'text-white/40'}`}>
-            {match.score.fullTime.home ?? 0}
-          </span>
-        )}
-      </div>
-      <div className={`flex items-center justify-between px-3 py-2 ${awayWon ? 'bg-white/10' : ''}`}>
-        <span className="text-xs font-bold uppercase tracking-wide truncate max-w-[110px]">
-          {match.awayTeam.tla || '?'}
-        </span>
-        {isFinished && (
-          <span className={`text-sm font-black tabular-nums ml-2 ${awayWon ? 'text-white' : 'text-white/40'}`}>
-            {match.score.fullTime.away ?? 0}
-          </span>
-        )}
-      </div>
+    <div className="border border-white/20 min-w-[220px] overflow-hidden">
+      <TeamRow
+        tla={match.homeTeam.tla}
+        name={match.homeTeam.shortName}
+        score={match.score.fullTime.home}
+        won={homeWon}
+        finished={isFinished}
+      />
+      <div className="border-t border-white/10" />
+      <TeamRow
+        tla={match.awayTeam.tla}
+        name={match.awayTeam.shortName}
+        score={match.score.fullTime.away}
+        won={awayWon}
+        finished={isFinished}
+      />
     </div>
   )
 }
@@ -64,8 +111,8 @@ export default function BracketTree({ matches }: Props) {
 
   if (knockoutMatches.length === 0) {
     return (
-      <div className="border border-white/20 p-8 text-center text-white/40">
-        <p className="text-sm tracking-widest uppercase">Knockout stage not yet determined</p>
+      <div className="border border-white/20 p-8 text-center">
+        <p className="text-sm tracking-widest uppercase text-white/40">Knockout stage not yet determined</p>
         <p className="text-xs mt-2 text-white/20">Check back after the group stage</p>
       </div>
     )
@@ -75,15 +122,16 @@ export default function BracketTree({ matches }: Props) {
 
   return (
     <div className="overflow-x-auto">
-      <div className="flex gap-6 min-w-max pb-4">
+      <div className="flex gap-8 min-w-max pb-6">
         {stagesPresent.map(stage => {
           const stageMatches = knockoutMatches.filter(m => m.stage === stage)
           return (
             <div key={stage} className="flex flex-col gap-4">
-              <h4 className="text-xs tracking-widest uppercase text-white/40 pb-1 border-b border-white/10">
+              <h4 className="text-[10px] tracking-[0.2em] uppercase text-white/35 font-bold pb-2 border-b border-white/10">
                 {STAGE_LABELS[stage]}
+                <span className="text-white/20 ml-2">·{stageMatches.length}</span>
               </h4>
-              <div className="flex flex-col gap-4 justify-around h-full">
+              <div className="flex flex-col gap-3">
                 {stageMatches.map(m => (
                   <BracketMatch key={m.id} match={m} />
                 ))}
