@@ -33,11 +33,35 @@ async function getStandings(): Promise<Standing[]> {
   }
 }
 
+function toLocalDateStr(utcDate: string) {
+  // Returns YYYY-MM-DD in the server's local timezone
+  return new Date(utcDate).toLocaleDateString('en-CA') // en-CA gives YYYY-MM-DD
+}
+
 export default async function Home() {
   const [allMatches, standings] = await Promise.all([getMatches(), getStandings()])
 
-  const upcomingMatches = allMatches
-    .filter(m => ['SCHEDULED', 'LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status))
+  const LIVE_STATUSES = ['IN_PLAY', 'LIVE', 'PAUSED']
+  const UPCOMING_STATUSES = ['TIMED', 'SCHEDULED', ...LIVE_STATUSES]
+
+  const today = new Date().toLocaleDateString('en-CA')
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString('en-CA')
+
+  const liveMatches = allMatches
+    .filter(m => LIVE_STATUSES.includes(m.status))
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())
+
+  const todayMatches = allMatches
+    .filter(m => UPCOMING_STATUSES.includes(m.status) && toLocalDateStr(m.utcDate) === today && !LIVE_STATUSES.includes(m.status))
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())
+
+  const tomorrowMatches = allMatches
+    .filter(m => UPCOMING_STATUSES.includes(m.status) && toLocalDateStr(m.utcDate) === tomorrow)
+    .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())
+
+  // All other future matches beyond tomorrow
+  const laterMatches = allMatches
+    .filter(m => UPCOMING_STATUSES.includes(m.status) && toLocalDateStr(m.utcDate) > tomorrow)
     .sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())
 
   const pastMatches = allMatches
@@ -79,14 +103,70 @@ export default async function Home() {
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase text-black">Upcoming</h2>
             <span className="text-black/30 text-sm tracking-widest uppercase">Matches</span>
           </div>
-          {upcomingMatches.length === 0 ? (
-            <p className="text-black/40 tracking-widest uppercase text-sm">No upcoming matches scheduled</p>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2">
-              {upcomingMatches.map(m => (
-                <MatchCard key={m.id} match={m} variant="light" />
-              ))}
+
+          {/* Live now */}
+          {liveMatches.length > 0 && (
+            <div className="mb-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="w-2 h-2 rounded-full bg-black animate-pulse" />
+                <h3 className="text-xs tracking-[0.25em] uppercase font-bold text-black">Live Now</h3>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                {liveMatches.map(m => <MatchCard key={m.id} match={m} variant="light" />)}
+              </div>
             </div>
+          )}
+
+          {/* Today */}
+          {todayMatches.length > 0 && (
+            <div className="mb-10">
+              <h3 className="text-xs tracking-[0.25em] uppercase font-bold text-black/40 mb-4">Today</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {todayMatches.map(m => <MatchCard key={m.id} match={m} variant="light" />)}
+              </div>
+            </div>
+          )}
+
+          {/* Tomorrow */}
+          {tomorrowMatches.length > 0 && (
+            <div className="mb-10">
+              <h3 className="text-xs tracking-[0.25em] uppercase font-bold text-black/40 mb-4">Tomorrow</h3>
+              <div className="grid gap-3 md:grid-cols-2">
+                {tomorrowMatches.map(m => <MatchCard key={m.id} match={m} variant="light" />)}
+              </div>
+            </div>
+          )}
+
+          {/* Later — collapsed summary by date */}
+          {laterMatches.length > 0 && (
+            <div>
+              <h3 className="text-xs tracking-[0.25em] uppercase font-bold text-black/40 mb-4">
+                Coming Up · {laterMatches.length} more matches
+              </h3>
+              {/* Group by date, show first 3 dates */}
+              {(() => {
+                const byDate: Record<string, Match[]> = {}
+                for (const m of laterMatches) {
+                  const d = toLocalDateStr(m.utcDate)
+                  if (!byDate[d]) byDate[d] = []
+                  byDate[d].push(m)
+                }
+                return Object.entries(byDate).slice(0, 3).map(([date, ms]) => (
+                  <div key={date} className="mb-6">
+                    <p className="text-[11px] text-black/30 tracking-widest uppercase mb-3">
+                      {new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    </p>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {ms.map(m => <MatchCard key={m.id} match={m} variant="light" />)}
+                    </div>
+                  </div>
+                ))
+              })()}
+            </div>
+          )}
+
+          {liveMatches.length === 0 && todayMatches.length === 0 && tomorrowMatches.length === 0 && laterMatches.length === 0 && (
+            <p className="text-black/40 tracking-widest uppercase text-sm">No upcoming matches</p>
           )}
         </div>
         <div className="absolute bottom-0 left-0 right-0 h-16 md:h-24 bg-black pointer-events-none"
