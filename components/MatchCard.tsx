@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { Match } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
+import TeamLink from './TeamLink'
 
 function formatDate(utcDate: string) {
   return new Date(utcDate).toLocaleDateString('en-US', {
@@ -66,20 +67,22 @@ export default function MatchCard({ match, variant = 'dark' }: Props) {
       <div className="px-4 py-4 flex items-center gap-3">
         {/* home team */}
         <div className="flex-1 flex flex-col items-end gap-1.5 min-w-0">
-          {homeFlag && (
-            <Image
-              src={homeFlag}
-              alt={match.homeTeam.name}
-              width={32}
-              height={22}
-              className="object-cover shadow-sm"
-              unoptimized
-            />
-          )}
-          <p className={`text-sm font-black tracking-tight uppercase leading-none ${mainText}`}>
-            {match.homeTeam.tla}
-          </p>
-          <p className={`text-[10px] ${mutedText} truncate max-w-full`}>{match.homeTeam.shortName}</p>
+          <TeamLink tla={match.homeTeam.tla} name={match.homeTeam.name} className="flex flex-col items-end gap-1.5 min-w-0">
+            {homeFlag && (
+              <Image
+                src={homeFlag}
+                alt={match.homeTeam.name}
+                width={32}
+                height={22}
+                className="object-cover shadow-sm"
+                unoptimized
+              />
+            )}
+            <p className={`text-sm font-black tracking-tight uppercase leading-none ${mainText}`}>
+              {match.homeTeam.tla}
+            </p>
+            <p className={`text-[10px] ${mutedText} truncate max-w-full`}>{match.homeTeam.shortName}</p>
+          </TeamLink>
         </div>
 
         {/* score / time */}
@@ -101,20 +104,22 @@ export default function MatchCard({ match, variant = 'dark' }: Props) {
 
         {/* away team */}
         <div className="flex-1 flex flex-col items-start gap-1.5 min-w-0">
-          {awayFlag && (
-            <Image
-              src={awayFlag}
-              alt={match.awayTeam.name}
-              width={32}
-              height={22}
-              className="object-cover shadow-sm"
-              unoptimized
-            />
-          )}
-          <p className={`text-sm font-black tracking-tight uppercase leading-none ${mainText}`}>
-            {match.awayTeam.tla}
-          </p>
-          <p className={`text-[10px] ${mutedText} truncate max-w-full`}>{match.awayTeam.shortName}</p>
+          <TeamLink tla={match.awayTeam.tla} name={match.awayTeam.name} className="flex flex-col items-start gap-1.5 min-w-0">
+            {awayFlag && (
+              <Image
+                src={awayFlag}
+                alt={match.awayTeam.name}
+                width={32}
+                height={22}
+                className="object-cover shadow-sm"
+                unoptimized
+              />
+            )}
+            <p className={`text-sm font-black tracking-tight uppercase leading-none ${mainText}`}>
+              {match.awayTeam.tla}
+            </p>
+            <p className={`text-[10px] ${mutedText} truncate max-w-full`}>{match.awayTeam.shortName}</p>
+          </TeamLink>
         </div>
       </div>
     </div>

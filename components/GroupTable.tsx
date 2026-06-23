@@ -3,6 +3,7 @@
 import Image from 'next/image'
 import { Standing } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
+import TeamLink from './TeamLink'
 
 interface Props {
   standing: Standing
@@ -55,22 +56,24 @@ export default function GroupTable({ standing, variant = 'dark' }: Props) {
 
                 {/* flag + name */}
                 <td className="pl-1 pr-2 py-2.5">
-                  <div className="flex items-center gap-2">
-                    {iso && (
-                      <Image
-                        src={iso}
-                        alt={row.team.name}
-                        width={20}
-                        height={14}
-                        className="object-cover flex-shrink-0 shadow-sm"
-                        unoptimized
-                      />
-                    )}
-                    <span className="font-bold uppercase tracking-wide leading-none">{row.team.tla}</span>
-                    <span className={`${subText} hidden sm:inline truncate max-w-[100px] text-[11px]`}>
-                      {row.team.shortName}
-                    </span>
-                  </div>
+                  <TeamLink tla={row.team.tla} name={row.team.name}>
+                    <div className="flex items-center gap-2">
+                      {iso && (
+                        <Image
+                          src={iso}
+                          alt={row.team.name}
+                          width={20}
+                          height={14}
+                          className="object-cover flex-shrink-0 shadow-sm"
+                          unoptimized
+                        />
+                      )}
+                      <span className="font-bold uppercase tracking-wide leading-none">{row.team.tla}</span>
+                      <span className={`${subText} hidden sm:inline truncate max-w-[100px] text-[11px]`}>
+                        {row.team.shortName}
+                      </span>
+                    </div>
+                  </TeamLink>
                 </td>
 
                 {/* stats */}

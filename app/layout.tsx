@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import Link from 'next/link'
+import Script from 'next/script'
 import Nav from '@/components/Nav'
 import './globals.css'
 
@@ -15,6 +16,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-4SJPCJSBH5" strategy="afterInteractive" />
+      <Script id="gtag-init" strategy="afterInteractive">{`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-4SJPCJSBH5');
+      `}</Script>
       <body className="bg-black text-white min-h-screen flex flex-col">
         {/* site header */}
         <header className="bg-black px-6 pt-8 pb-5">
