@@ -1,6 +1,8 @@
 import { getMatches, toLocalDateStr } from '@/lib/api-server'
 import { Match } from '@/lib/types'
 import MatchCard from '@/components/MatchCard'
+import T from '@/components/T'
+import LocalDate from '@/components/LocalDate'
 
 export const revalidate = 60
 
@@ -49,7 +51,7 @@ export default async function UpcomingPage() {
         <section className="mb-12">
           <div className="flex items-center gap-2 mb-5">
             <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-            <h2 className="text-xs tracking-[0.25em] uppercase font-bold">Live Now</h2>
+            <h2 className="text-xs tracking-[0.25em] uppercase font-bold"><T k="section_liveNow" /></h2>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {liveMatches.map(m => <MatchCard key={m.id} match={m} />)}
@@ -60,7 +62,7 @@ export default async function UpcomingPage() {
       {/* Today */}
       {todayMatches.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-xs tracking-[0.25em] uppercase font-bold text-white/40 mb-5">Today</h2>
+          <h2 className="text-xs tracking-[0.25em] uppercase font-bold text-white/40 mb-5"><T k="section_today" /></h2>
           <div className="grid gap-3 md:grid-cols-2">
             {todayMatches.map(m => <MatchCard key={m.id} match={m} />)}
           </div>
@@ -70,7 +72,7 @@ export default async function UpcomingPage() {
       {/* Tomorrow */}
       {tomorrowMatches.length > 0 && (
         <section className="mb-12">
-          <h2 className="text-xs tracking-[0.25em] uppercase font-bold text-white/40 mb-5">Tomorrow</h2>
+          <h2 className="text-xs tracking-[0.25em] uppercase font-bold text-white/40 mb-5"><T k="section_tomorrow" /></h2>
           <div className="grid gap-3 md:grid-cols-2">
             {tomorrowMatches.map(m => <MatchCard key={m.id} match={m} />)}
           </div>
@@ -81,9 +83,7 @@ export default async function UpcomingPage() {
       {byDate(laterMatches).map(([date, matches]) => (
         <section key={date} className="mb-12">
           <h2 className="text-xs tracking-[0.25em] uppercase font-bold text-white/40 mb-5">
-            {new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
-              weekday: 'long', month: 'long', day: 'numeric',
-            })}
+            <LocalDate dateStr={date + 'T12:00:00'} />
           </h2>
           <div className="grid gap-3 md:grid-cols-2">
             {matches.map(m => <MatchCard key={m.id} match={m} />)}
@@ -92,7 +92,7 @@ export default async function UpcomingPage() {
       ))}
 
       {noMatches && (
-        <p className="text-white/30 tracking-widest uppercase text-sm">No upcoming matches</p>
+        <p className="text-white/30 tracking-widest uppercase text-sm"><T k="section_noUpcoming" /></p>
       )}
     </div>
   )

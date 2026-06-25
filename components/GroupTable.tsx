@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { Standing } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
 import TeamLink from './TeamLink'
+import { useLanguage } from '@/lib/i18n'
 
 interface Props {
   standing: Standing
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export default function GroupTable({ standing, variant = 'dark' }: Props) {
+  const { t } = useLanguage()
   const light = variant === 'light'
   const groupName = standing.group.replace('Group ', '').replace('GROUP_', '')
 
@@ -26,14 +28,14 @@ export default function GroupTable({ standing, variant = 'dark' }: Props) {
     <div className={`border ${base} overflow-hidden`}>
       {/* group header */}
       <div className={`px-4 py-3 border-b ${headerBorder} ${headerBg}`}>
-        <h3 className="text-xs font-black tracking-[0.2em] uppercase">Group {groupName}</h3>
+        <h3 className="text-xs font-black tracking-[0.2em] uppercase">{t('groups_group')} {groupName}</h3>
       </div>
 
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className={`border-b ${rowBorder}`}>
             <th className={`text-left pl-3 pr-1 py-2 ${mutedText} tracking-widest uppercase font-normal w-7`}>#</th>
-            <th className={`text-left pl-1 pr-2 py-2 ${mutedText} tracking-widest uppercase font-normal`}>Team</th>
+            <th className={`text-left pl-1 pr-2 py-2 ${mutedText} tracking-widest uppercase font-normal`}>{t('groups_colTeam')}</th>
             <th className={`text-center px-1 py-2 ${mutedText} tracking-widest uppercase font-normal w-7`}>P</th>
             <th className={`text-center px-1 py-2 ${mutedText} tracking-widest uppercase font-normal w-7`}>W</th>
             <th className={`text-center px-1 py-2 ${mutedText} tracking-widest uppercase font-normal w-7`}>D</th>

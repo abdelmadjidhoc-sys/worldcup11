@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { flagUrl } from '@/lib/flags'
+import { useLanguage } from '@/lib/i18n'
 
 interface MatchDef {
   id: string
@@ -75,11 +76,13 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
 
   // Form state
   const [username, setUsername] = useState('')
+  const [savedUsername, setSavedUsername] = useState<string | null>(null)
   const [homeScore, setHomeScore] = useState(0)
   const [awayScore, setAwayScore] = useState(0)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const { t } = useLanguage()
 
   const fetchPredictions = useCallback(async () => {
     const res = await fetch('/api/predictions')
@@ -92,6 +95,15 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
     const interval = setInterval(fetchPredictions, 30000)
     return () => clearInterval(interval)
   }, [fetchPredictions])
+
+  // Load saved username from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem('predict_username')
+    if (stored) {
+      setSavedUsername(stored)
+      setUsername(stored)
+    }
+  }, [])
 
   function openPredict() {
     setModal('pick')
@@ -135,6 +147,8 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
     })
 
     if (res.ok) {
+      localStorage.setItem('predict_username', username.trim())
+      setSavedUsername(username.trim())
       closeModal()
       await fetchPredictions()
     } else {
@@ -149,25 +163,25 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
       {/* Page header */}
       <div className="flex items-end justify-between mb-8">
         <div>
-          <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 mb-1">June 25, 2026</p>
+          <p className="text-[10px] tracking-[0.35em] uppercase text-white/25 mb-1">{t('predict_date')}</p>
           <h2 className="text-2xl font-black tracking-tight uppercase leading-none text-white">
-            Today&apos;s Predictions
+            {t('predict_title')}
           </h2>
         </div>
         <button
           onClick={openPredict}
           className="text-xs tracking-widest uppercase font-bold px-4 py-2.5 border border-white/30 text-white hover:bg-white hover:text-black transition-all duration-150"
         >
-          + Predict
+          {t('predict_cta')}
         </button>
       </div>
 
       {/* Unified predictions feed */}
       {loading ? (
-        <p className="text-sm text-white/25">Loading…</p>
+        <p className="text-sm text-white/25">{t('predict_loading')}</p>
       ) : predictions.length === 0 ? (
         <div className="border border-white/10 px-6 py-12 text-center">
-          <p className="text-sm text-white/30">No predictions yet — be the first!</p>
+          <p className="text-sm text-white/30">{t('predict_empty')}</p>
         </div>
       ) : (
         <ul className="divide-y divide-white/8">
@@ -225,7 +239,7 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
             {modal === 'pick' && (
               <div className="max-w-lg mx-auto w-full px-4 py-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-base font-black tracking-tight uppercase text-white">Pick a match</h3>
+                  <h3 className="text-base font-black tracking-tight uppercase text-white">{t('predict_pickMatch')}</h3>
                   <button
                     onClick={closeModal}
                     className="text-white/40 hover:text-white transition-colors duration-150 text-xl leading-none"
@@ -243,7 +257,7 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
                         <div className="flex items-center gap-3">
                           <Flag tla={m.home.tla} name={m.home.name} />
                           <span className="text-sm font-black uppercase text-white">{m.home.tla}</span>
-                          <span className="text-xs text-white/25">vs</span>
+                          <span className="text-xs text-white/25">{t('predict_vs')}</span>
                           <span className="text-sm font-black uppercase text-white">{m.away.tla}</span>
                           <Flag tla={m.away.tla} name={m.away.name} />
                         </div>
@@ -273,7 +287,7 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
                   <div className="flex items-center gap-2">
                     <Flag tla={selectedMatch.home.tla} name={selectedMatch.home.name} />
                     <span className="text-sm font-black uppercase text-white">{selectedMatch.home.tla}</span>
-                    <span className="text-xs text-white/25">vs</span>
+                    <span className="text-xs text-white/25">{t('predict_vs')}</span>
                     <span className="text-sm font-black uppercase text-white">{selectedMatch.away.tla}</span>
                     <Flag tla={selectedMatch.away.tla} name={selectedMatch.away.name} />
                   </div>
@@ -301,31 +315,51 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
                     />
                   </div>
 
-                  {/* Name */}
-                  <div>
-                    <input
-                      type="text"
-                      value={username}
-                      onChange={e => setUsername(e.target.value.slice(0, 30))}
-                      placeholder="Your name / pseudo"
-                      maxLength={30}
-                      className="w-full bg-transparent border border-white/20 px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/50 transition-colors duration-150"
-                    />
-                    <p className="text-[10px] text-white/25 mt-1 text-right">{username.length}/30</p>
-                  </div>
+                  {/* Name — locked if returning user, editable on first visit */}
+                  {savedUsername ? (
+                    <div className="flex items-center justify-between border border-white/10 px-3 py-2.5">
+                      <div>
+                        <p className="text-[10px] text-white/30 uppercase tracking-widest mb-0.5">{t('predict_playingAs')}</p>
+                        <p className="text-sm font-bold text-white">{savedUsername}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.removeItem('predict_username')
+                          setSavedUsername(null)
+                          setUsername('')
+                        }}
+                        className="text-[10px] text-white/25 hover:text-white/60 tracking-widest uppercase transition-colors duration-150"
+                      >
+                        {t('predict_notYou')}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <input
+                        type="text"
+                        value={username}
+                        onChange={e => setUsername(e.target.value.slice(0, 30))}
+                        placeholder={t('predict_namePlaceholder')}
+                        maxLength={30}
+                        className="w-full bg-transparent border border-white/20 px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/50 transition-colors duration-150"
+                      />
+                      <p className="text-[10px] text-white/25 mt-1 text-right">{username.length}/30</p>
+                    </div>
+                  )}
 
                   {/* Comment */}
                   <div>
                     <textarea
                       value={comment}
                       onChange={e => setComment(e.target.value.slice(0, 280))}
-                      placeholder="Add a comment… (optional)"
+                      placeholder={t('predict_commentPlaceholder')}
                       maxLength={280}
                       rows={3}
                       className="w-full bg-transparent border border-white/20 px-3 py-2.5 text-sm text-white placeholder-white/25 focus:outline-none focus:border-white/50 transition-colors duration-150 resize-none"
                     />
                     <p className={`text-[10px] mt-0.5 text-right transition-colors duration-150 ${comment.length > 250 ? 'text-white/60' : 'text-white/25'}`}>
-                      {280 - comment.length} chars left
+                      {280 - comment.length} {t('predict_charsLeft')}
                     </p>
                   </div>
 
@@ -336,7 +370,7 @@ export default function PredictionsPage({ matches }: { matches: MatchDef[] }) {
                     disabled={submitting}
                     className="w-full py-3 text-xs tracking-widest uppercase font-bold border border-white/30 text-white hover:bg-white hover:text-black disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
                   >
-                    {submitting ? 'Submitting…' : 'Submit Prediction'}
+                    {submitting ? t('predict_submitting') : t('predict_submit')}
                   </button>
                 </form>
               </div>

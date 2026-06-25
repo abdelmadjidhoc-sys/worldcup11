@@ -5,16 +5,17 @@ import { useState, useEffect } from 'react'
 import { Match } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
 import TeamLink from './TeamLink'
+import { useLanguage } from '@/lib/i18n'
 
-function useLocalDateTime(utcDate: string) {
+function useLocalDateTime(utcDate: string, locale: string) {
   const [date, setDate] = useState<string | null>(null)
   const [time, setTime] = useState<string | null>(null)
 
   useEffect(() => {
     const d = new Date(utcDate)
-    setDate(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))
-    setTime(d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }))
-  }, [utcDate])
+    setDate(d.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }))
+    setTime(d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }))
+  }, [utcDate, locale])
 
   return { date, time }
 }
@@ -30,7 +31,8 @@ interface Props {
 }
 
 export default function MatchCard({ match, variant = 'dark' }: Props) {
-  const { date: localDate, time: localTime } = useLocalDateTime(match.utcDate)
+  const { lang, t } = useLanguage()
+  const { date: localDate, time: localTime } = useLocalDateTime(match.utcDate, lang === 'fr' ? 'fr-FR' : 'en-US')
   const light = variant === 'light'
 
   const border = light ? 'border-black/15' : 'border-white/20'
@@ -57,12 +59,12 @@ export default function MatchCard({ match, variant = 'dark' }: Props) {
         <span className={`text-xs tracking-widest uppercase ${mutedText}`}>
           {stageLabel(match.stage, match.group)}
         </span>
-        {isLive && <span className={`text-xs tracking-widest uppercase ${liveText}`}>Live</span>}
+        {isLive && <span className={`text-xs tracking-widest uppercase ${liveText}`}>{t('match_live')}</span>}
         {!isLive && !isFinished && (
           <span className={`text-xs ${mutedText}`}>{localDate ?? '—'}</span>
         )}
         {isFinished && (
-          <span className={`text-xs tracking-widest uppercase ${mutedText}`}>FT</span>
+          <span className={`text-xs tracking-widest uppercase ${mutedText}`}>{t('match_ft')}</span>
         )}
       </div>
 

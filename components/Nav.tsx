@@ -3,18 +3,20 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
+import { useLanguage, TKey } from '@/lib/i18n'
 
-const TABS = [
-  { label: 'Upcoming', href: '/upcoming' },
-  { label: 'Results',  href: '/results'  },
-  { label: 'Groups',   href: '/groups'   },
-  { label: 'Bracket',  href: '/bracket'  },
-  { label: 'Predict',  href: '/predict'  },
+const TABS: { key: TKey; href: string }[] = [
+  { key: 'nav_upcoming', href: '/upcoming' },
+  { key: 'nav_results',  href: '/results'  },
+  { key: 'nav_groups',   href: '/groups'   },
+  { key: 'nav_bracket',  href: '/bracket'  },
+  { key: 'nav_predict',  href: '/predict'  },
 ]
 
 export default function Nav() {
   const pathname = usePathname()
   const activeRef = useRef<HTMLAnchorElement>(null)
+  const { t } = useLanguage()
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' })
@@ -35,7 +37,7 @@ export default function Nav() {
                 ${active ? 'text-white' : 'text-white/35 hover:text-white/70'}
               `}
             >
-              {tab.label}
+              {t(tab.key)}
               {active && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-white" />
               )}

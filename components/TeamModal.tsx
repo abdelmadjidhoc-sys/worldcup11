@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Match, StandingRow } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
 import MatchCard from './MatchCard'
+import { useLanguage } from '@/lib/i18n'
 
 interface TeamData {
   matches: Match[]
@@ -23,6 +24,7 @@ function groupLabel(group: string) {
 }
 
 export default function TeamModal({ tla, name, onClose }: Props) {
+  const { t } = useLanguage()
   const [data, setData] = useState<TeamData | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -75,7 +77,7 @@ export default function TeamModal({ tla, name, onClose }: Props) {
         {/* body */}
         <div className="overflow-y-auto flex-1 px-4 py-5 space-y-6">
           {loading && (
-            <p className="text-white/30 tracking-widest uppercase text-xs text-center py-8">Loading…</p>
+            <p className="text-white/30 tracking-widest uppercase text-xs text-center py-8">{t('modal_loading')}</p>
           )}
 
           {!loading && (
@@ -83,7 +85,7 @@ export default function TeamModal({ tla, name, onClose }: Props) {
               {/* played */}
               {played.length > 0 && (
                 <section>
-                  <h3 className="text-xs tracking-[0.2em] uppercase text-white/40 font-bold mb-3">Results</h3>
+                  <h3 className="text-xs tracking-[0.2em] uppercase text-white/40 font-bold mb-3">{t('modal_results')}</h3>
                   <div className="space-y-2">
                     {played.map(m => <MatchCard key={m.id} match={m} />)}
                   </div>
@@ -93,7 +95,7 @@ export default function TeamModal({ tla, name, onClose }: Props) {
               {/* upcoming */}
               {upcoming.length > 0 && (
                 <section>
-                  <h3 className="text-xs tracking-[0.2em] uppercase text-white/40 font-bold mb-3">Upcoming</h3>
+                  <h3 className="text-xs tracking-[0.2em] uppercase text-white/40 font-bold mb-3">{t('modal_upcoming')}</h3>
                   <div className="space-y-2">
                     {upcoming.map(m => <MatchCard key={m.id} match={m} />)}
                   </div>
@@ -101,7 +103,7 @@ export default function TeamModal({ tla, name, onClose }: Props) {
               )}
 
               {played.length === 0 && upcoming.length === 0 && (
-                <p className="text-white/30 tracking-widest uppercase text-xs text-center py-8">No matches found</p>
+                <p className="text-white/30 tracking-widest uppercase text-xs text-center py-8">{t('modal_noMatches')}</p>
               )}
             </>
           )}
@@ -117,7 +119,7 @@ export default function TeamModal({ tla, name, onClose }: Props) {
               <thead>
                 <tr className="border-b border-white/10">
                   <th className="text-left py-1.5 text-white/30 tracking-widest uppercase font-normal w-6">#</th>
-                  <th className="text-left py-1.5 text-white/30 tracking-widest uppercase font-normal">Team</th>
+                  <th className="text-left py-1.5 text-white/30 tracking-widest uppercase font-normal">{t('modal_colTeam')}</th>
                   <th className="text-center py-1.5 text-white/30 tracking-widest uppercase font-normal w-8">P</th>
                   <th className="text-center py-1.5 text-white/30 tracking-widest uppercase font-normal w-8">GD</th>
                   <th className="text-center py-1.5 text-white/30 tracking-widest uppercase font-normal w-10">Pts</th>
