@@ -1,20 +1,22 @@
 'use client'
 
 import Image from 'next/image'
+import { useState, useEffect } from 'react'
 import { Match } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
 import TeamLink from './TeamLink'
 
-function formatDate(utcDate: string) {
-  return new Date(utcDate).toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric',
-  })
-}
+function useLocalDateTime(utcDate: string) {
+  const [date, setDate] = useState<string | null>(null)
+  const [time, setTime] = useState<string | null>(null)
 
-function formatTime(utcDate: string) {
-  return new Date(utcDate).toLocaleTimeString('en-US', {
-    hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
-  })
+  useEffect(() => {
+    const d = new Date(utcDate)
+    setDate(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }))
+    setTime(d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' }))
+  }, [utcDate])
+
+  return { date, time }
 }
 
 function stageLabel(stage: string, group: string | null) {
@@ -28,6 +30,7 @@ interface Props {
 }
 
 export default function MatchCard({ match, variant = 'dark' }: Props) {
+  const { date: localDate, time: localTime } = useLocalDateTime(match.utcDate)
   const light = variant === 'light'
 
   const border = light ? 'border-black/15' : 'border-white/20'
@@ -56,7 +59,7 @@ export default function MatchCard({ match, variant = 'dark' }: Props) {
         </span>
         {isLive && <span className={`text-xs tracking-widest uppercase ${liveText}`}>Live</span>}
         {!isLive && !isFinished && (
-          <span className={`text-xs ${mutedText}`}>{formatDate(match.utcDate)}</span>
+          <span className={`text-xs ${mutedText}`}>{localDate ?? '—'}</span>
         )}
         {isFinished && (
           <span className={`text-xs tracking-widest uppercase ${mutedText}`}>FT</span>
@@ -98,7 +101,7 @@ export default function MatchCard({ match, variant = 'dark' }: Props) {
               </span>
             </div>
           ) : (
-            <p className={`text-sm font-bold tabular-nums ${mainText}`}>{formatTime(match.utcDate)}</p>
+            <p className={`text-sm font-bold tabular-nums ${mainText}`}>{localTime ?? '--:--'}</p>
           )}
         </div>
 
