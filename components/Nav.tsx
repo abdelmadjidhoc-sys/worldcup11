@@ -8,6 +8,7 @@ const TABS = [
   { label: 'Results',  href: '/results'  },
   { label: 'Groups',   href: '/groups'   },
   { label: 'Bracket',  href: '/bracket'  },
+  { label: 'Predict',  href: '/predict'  },
 ]
 
 export default function Nav() {
