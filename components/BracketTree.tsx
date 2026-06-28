@@ -5,14 +5,13 @@ import { Match } from '@/lib/types'
 import { flagUrl } from '@/lib/flags'
 import { useLanguage, TKey } from '@/lib/i18n'
 
-const KNOCKOUT_STAGES = [
-  'LAST_32',
-  'LAST_16',
-  'QUARTER_FINALS',
-  'SEMI_FINALS',
-  'THIRD_PLACE',
-  'FINAL',
-]
+// ── Layout constants ──────────────────────────────────────────────────────────
+const CARD_W   = 136   // px, width of each match card
+const CARD_H   = 52    // px, height of each match card (two rows)
+const SLOT     = 72    // px, slot height for R32 (8 matches per side)
+const SLOTS    = 8     // matches per side in R32
+const H        = SLOT * SLOTS  // 576px total bracket height
+const CONN_W   = 28    // px, width of SVG connector strips
 
 const STAGE_KEYS: Record<string, TKey> = {
   LAST_32:       'bracket_round32',
@@ -23,96 +22,232 @@ const STAGE_KEYS: Record<string, TKey> = {
   FINAL:         'bracket_final',
 }
 
-interface TeamRowProps {
-  tla:       string | null
-  name:      string | null
-  score:     number | null
-  won:       boolean
-  finished:  boolean
-}
-
-function TeamRow({ tla, name, score, won, finished }: TeamRowProps) {
+// ── Compact match card ────────────────────────────────────────────────────────
+function BracketCard({ match }: { match: Match | null }) {
   const { t } = useLanguage()
-  const flag = tla ? flagUrl(tla, 20) : null
-  const displayName = name ?? (tla ?? t('bracket_tbd'))
+
+  if (!match) {
+    return (
+      <div
+        className="border border-white/10 overflow-hidden flex-shrink-0"
+        style={{ width: CARD_W, height: CARD_H }}
+      >
+        {[0, 1].map(i => (
+          <div key={i} className={`flex items-center px-2 ${i === 1 ? 'border-t border-white/8' : ''}`} style={{ height: CARD_H / 2 }}>
+            <span className="text-[9px] text-white/20 uppercase tracking-widest">{t('bracket_tbd')}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const isFinished = match.status === 'FINISHED'
+  const homeWon    = match.score.winner === 'HOME_TEAM'
+  const awayWon    = match.score.winner === 'AWAY_TEAM'
+
+  function TeamRow({ tla, score, won }: { tla: string | null; score: number | null; won: boolean }) {
+    const flag = tla ? flagUrl(tla, 20) : null
+    return (
+      <div
+        className={`flex items-center justify-between px-2 gap-1.5 ${won ? 'bg-white/10' : ''}`}
+        style={{ height: CARD_H / 2 }}
+      >
+        <div className="flex items-center gap-1.5 min-w-0">
+          {flag
+            ? <Image src={flag} alt={tla!} width={16} height={11} className="object-cover flex-shrink-0" unoptimized />
+            : <span className="w-4 h-2.5 border border-white/20 flex-shrink-0 rounded-[1px]" />
+          }
+          <span className={`text-[10px] font-black uppercase tracking-wide truncate ${won ? 'text-white' : 'text-white/55'}`}>
+            {tla ?? t('bracket_tbd')}
+          </span>
+        </div>
+        {isFinished && score !== null && (
+          <span className={`text-[10px] font-black tabular-nums flex-shrink-0 ${won ? 'text-white' : 'text-white/25'}`}>
+            {score}
+          </span>
+        )}
+      </div>
+    )
+  }
 
   return (
-    <div className={`flex items-center justify-between px-3 py-2.5 gap-3 ${won ? 'bg-white/10' : ''}`}>
-      <div className="flex items-center gap-2 min-w-0">
-        {/* flag or white placeholder */}
-        {flag ? (
-          <Image
-            src={flag}
-            alt={displayName}
-            width={20}
-            height={14}
-            className="object-cover flex-shrink-0"
-            unoptimized
-          />
-        ) : (
-          <span className="w-5 h-3.5 flex-shrink-0 border border-white/20 bg-white/5 rounded-[1px]" />
-        )}
+    <div
+      className="border border-white/20 overflow-hidden flex-shrink-0"
+      style={{ width: CARD_W, height: CARD_H }}
+    >
+      <TeamRow tla={match.homeTeam.tla} score={match.score.fullTime.home} won={homeWon} />
+      <div className="border-t border-white/10" />
+      <TeamRow tla={match.awayTeam.tla} score={match.score.fullTime.away} won={awayWon} />
+    </div>
+  )
+}
 
-        <div className="min-w-0">
-          {tla ? (
-            <>
-              <span className="text-xs font-black uppercase tracking-wide">{tla}</span>
-              <span className="text-[10px] text-white/40 ml-1.5 hidden sm:inline truncate">{name ?? ''}</span>
-            </>
-          ) : (
-            <span className="text-xs text-white/30 tracking-widest uppercase">{t('bracket_tbd')}</span>
-          )}
+// ── Column: evenly spaces matches in the total bracket height ─────────────────
+function Column({ matches, count }: { matches: (Match | null)[]; count: number }) {
+  const slotH = H / count
+  const padded = [...matches]
+  while (padded.length < count) padded.push(null)
+
+  return (
+    <div className="relative flex-shrink-0" style={{ width: CARD_W, height: H }}>
+      {padded.map((m, i) => (
+        <div
+          key={m?.id ?? `empty-${i}`}
+          className="absolute flex items-center"
+          style={{ top: i * slotH, height: slotH, width: CARD_W }}
+        >
+          <BracketCard match={m} />
         </div>
-      </div>
+      ))}
+    </div>
+  )
+}
 
-      {finished && (
-        <span className={`text-sm font-black tabular-nums flex-shrink-0 ${won ? 'text-white' : 'text-white/35'}`}>
-          {score ?? 0}
-        </span>
+// ── SVG connector strip between two adjacent columns ──────────────────────────
+// Handles both fan-in (left > right) and fan-out (left < right)
+function Connector({ left, right }: { left: number; right: number }) {
+  const leftSlot  = H / left
+  const rightSlot = H / right
+  const midX      = CONN_W / 2
+  const stroke    = 'rgba(255,255,255,0.18)'
+
+  const segs: { x1: number; y1: number; x2: number; y2: number }[] = []
+
+  if (left >= right) {
+    // fan-in: pairs of left items merge into one right item
+    const ratio = left / right
+    for (let i = 0; i < right; i++) {
+      const toY     = (i + 0.5) * rightSlot
+      const topFrom = (i * ratio + 0.5) * leftSlot
+      const botFrom = ((i + 1) * ratio - 0.5) * leftSlot
+      segs.push(
+        { x1: 0,    y1: topFrom, x2: midX,   y2: topFrom }, // top H
+        { x1: 0,    y1: botFrom, x2: midX,   y2: botFrom }, // bot H
+        { x1: midX, y1: topFrom, x2: midX,   y2: botFrom }, // V
+        { x1: midX, y1: toY,    x2: CONN_W, y2: toY     }, // out H
+      )
+    }
+  } else {
+    // fan-out: one left item spreads to multiple right items
+    const ratio = right / left
+    for (let i = 0; i < left; i++) {
+      const fromY  = (i + 0.5) * leftSlot
+      const topTo  = (i * ratio + 0.5) * rightSlot
+      const botTo  = ((i + 1) * ratio - 0.5) * rightSlot
+      segs.push(
+        { x1: 0,    y1: fromY, x2: midX,   y2: fromY }, // in H
+        { x1: midX, y1: topTo, x2: midX,   y2: botTo  }, // V
+        { x1: midX, y1: topTo, x2: CONN_W, y2: topTo  }, // top H
+        { x1: midX, y1: botTo, x2: CONN_W, y2: botTo  }, // bot H
+      )
+    }
+  }
+
+  return (
+    <svg width={CONN_W} height={H} className="flex-shrink-0 overflow-visible">
+      {segs.map((s, i) => (
+        <line key={i} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} stroke={stroke} strokeWidth="1" />
+      ))}
+    </svg>
+  )
+}
+
+// ── Simple horizontal connector (SF → Final → SF) ────────────────────────────
+function HLine() {
+  return (
+    <svg width={CONN_W} height={H} className="flex-shrink-0">
+      <line x1="0" y1={H / 2} x2={CONN_W} y2={H / 2} stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+    </svg>
+  )
+}
+
+// ── Center Final panel ────────────────────────────────────────────────────────
+function FinalPanel({ match, thirdPlace }: { match: Match | null; thirdPlace: Match | null }) {
+  const { t } = useLanguage()
+
+  const winner = match?.score.winner === 'HOME_TEAM'
+    ? match.homeTeam
+    : match?.score.winner === 'AWAY_TEAM'
+    ? match.awayTeam
+    : null
+
+  const winnerFlag = winner?.tla ? flagUrl(winner.tla, 40) : null
+
+  return (
+    <div className="flex-shrink-0 flex flex-col items-center justify-center gap-4" style={{ height: H, width: CARD_W + 40 }}>
+      <p className="text-[9px] tracking-[0.25em] uppercase text-white/30 font-bold">{t('bracket_final')}</p>
+
+      <BracketCard match={match} />
+
+      {winner ? (
+        <div className="flex flex-col items-center gap-2 border border-white/20 px-5 py-3 text-center">
+          {winnerFlag && (
+            <Image src={winnerFlag} alt={winner.name} width={32} height={22} className="object-cover shadow" unoptimized />
+          )}
+          <div>
+            <p className="text-[9px] tracking-[0.25em] uppercase text-white/30 mb-0.5">Winner</p>
+            <p className="text-sm font-black uppercase tracking-widest">{winner.tla}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="border border-white/10 px-5 py-3 text-center">
+          <p className="text-[9px] tracking-[0.2em] uppercase text-white/20">Winner</p>
+          <p className="text-xs font-black uppercase tracking-widest text-white/20 mt-0.5">{t('bracket_tbd')}</p>
+        </div>
+      )}
+
+      {thirdPlace && (
+        <div className="flex flex-col items-center gap-1.5 mt-2">
+          <p className="text-[9px] tracking-[0.2em] uppercase text-white/25">{t('bracket_third')}</p>
+          <BracketCard match={thirdPlace} />
+        </div>
       )}
     </div>
   )
 }
 
-interface BracketMatchProps {
-  match: Match
-}
-
-function BracketMatch({ match }: BracketMatchProps) {
-  const isFinished = match.status === 'FINISHED'
-  const homeWon = match.score.winner === 'HOME_TEAM'
-  const awayWon = match.score.winner === 'AWAY_TEAM'
+// ── Stage label row ───────────────────────────────────────────────────────────
+function Labels({ leftStages, rightStages }: { leftStages: string[]; rightStages: string[] }) {
+  const { t } = useLanguage()
+  const cell = (key: TKey) => (
+    <div className="text-center flex-shrink-0" style={{ width: CARD_W }}>
+      <span className="text-[8px] tracking-[0.2em] uppercase text-white/25 font-bold">{t(key)}</span>
+    </div>
+  )
+  const gap = <div className="flex-shrink-0" style={{ width: CONN_W }} />
 
   return (
-    <div className="border border-white/20 min-w-[220px] overflow-hidden">
-      <TeamRow
-        tla={match.homeTeam.tla}
-        name={match.homeTeam.shortName}
-        score={match.score.fullTime.home}
-        won={homeWon}
-        finished={isFinished}
-      />
-      <div className="border-t border-white/10" />
-      <TeamRow
-        tla={match.awayTeam.tla}
-        name={match.awayTeam.shortName}
-        score={match.score.fullTime.away}
-        won={awayWon}
-        finished={isFinished}
-      />
+    <div className="flex items-end mb-2">
+      {leftStages.map((s, i) => (
+        <span key={s} className="contents">
+          {i > 0 && gap}
+          {cell(STAGE_KEYS[s] as TKey)}
+        </span>
+      ))}
+      {gap}
+      <div className="flex-shrink-0" style={{ width: CARD_W + 40 }} />
+      {gap}
+      {rightStages.map((s, i) => (
+        <span key={s} className="contents">
+          {i > 0 && gap}
+          {cell(STAGE_KEYS[s] as TKey)}
+        </span>
+      ))}
     </div>
   )
 }
 
-interface Props {
-  matches: Match[]
-}
+// ── Main export ───────────────────────────────────────────────────────────────
+interface Props { matches: Match[] }
 
 export default function BracketTree({ matches }: Props) {
   const { t } = useLanguage()
-  const knockoutMatches = matches.filter(m => KNOCKOUT_STAGES.includes(m.stage))
 
-  if (knockoutMatches.length === 0) {
+  const ko = matches.filter(m =>
+    ['LAST_32','LAST_16','QUARTER_FINALS','SEMI_FINALS','THIRD_PLACE','FINAL'].includes(m.stage)
+  )
+
+  if (ko.length === 0) {
     return (
       <div className="border border-white/20 p-8 text-center">
         <p className="text-sm tracking-widest uppercase text-white/40">{t('bracket_notReady')}</p>
@@ -121,27 +256,75 @@ export default function BracketTree({ matches }: Props) {
     )
   }
 
-  const stagesPresent = KNOCKOUT_STAGES.filter(s => knockoutMatches.some(m => m.stage === s))
+  const byStage = (stage: string) =>
+    ko.filter(m => m.stage === stage).sort((a, b) => a.id - b.id)
+
+  const r32  = byStage('LAST_32')         // up to 16 matches
+  const r16  = byStage('LAST_16')         // up to 8 matches
+  const qf   = byStage('QUARTER_FINALS')  // up to 4 matches
+  const sf   = byStage('SEMI_FINALS')     // up to 2 matches
+  const fin  = byStage('FINAL')[0] ?? null
+  const trd  = byStage('THIRD_PLACE')[0] ?? null
+
+  function half<T>(arr: T[]): [T[], T[]] {
+    const mid = Math.ceil(arr.length / 2)
+    return [arr.slice(0, mid), arr.slice(mid)]
+  }
+
+  const [lR32, rR32] = half(r32)
+  const [lR16, rR16] = half(r16)
+  const [lQF,  rQF]  = half(qf)
+  const [lSF,  rSF]  = half(sf)
+
+  const leftStages  = ['LAST_32','LAST_16','QUARTER_FINALS','SEMI_FINALS'].filter(s => byStage(s).length > 0)
+  const rightStages = [...leftStages].reverse()
+
+  // Expected counts per side for each stage
+  const expectedL: Record<string, number> = { LAST_32: 8, LAST_16: 4, QUARTER_FINALS: 2, SEMI_FINALS: 1 }
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-8 min-w-max pb-6">
-        {stagesPresent.map(stage => {
-          const stageMatches = knockoutMatches.filter(m => m.stage === stage)
-          return (
-            <div key={stage} className="flex flex-col gap-4">
-              <h4 className="text-[10px] tracking-[0.2em] uppercase text-white/35 font-bold pb-2 border-b border-white/10">
-                {t(STAGE_KEYS[stage])}
-                <span className="text-white/20 ml-2">·{stageMatches.length}</span>
-              </h4>
-              <div className="flex flex-col gap-3">
-                {stageMatches.map(m => (
-                  <BracketMatch key={m.id} match={m} />
-                ))}
-              </div>
-            </div>
-          )
-        })}
+    <div className="overflow-x-auto pb-4">
+      <div className="min-w-max">
+        <Labels leftStages={leftStages} rightStages={rightStages} />
+
+        <div className="flex items-center">
+          {/* ── LEFT SIDE ── */}
+          {leftStages.map((stage, i) => {
+            const data = stage === 'LAST_32' ? lR32
+              : stage === 'LAST_16' ? lR16
+              : stage === 'QUARTER_FINALS' ? lQF
+              : lSF
+            const count = expectedL[stage]
+            const nextCount = i < leftStages.length - 1 ? expectedL[leftStages[i + 1]] : 1
+            return (
+              <span key={stage} className="contents">
+                <Column matches={data} count={count} />
+                <Connector left={count} right={nextCount} />
+              </span>
+            )
+          })}
+
+          {/* ── FINAL (center) ── */}
+          <HLine />
+          <FinalPanel match={fin} thirdPlace={trd} />
+          <HLine />
+
+          {/* ── RIGHT SIDE (mirrored) ── */}
+          {rightStages.map((stage, i) => {
+            const data = stage === 'LAST_32' ? rR32
+              : stage === 'LAST_16' ? rR16
+              : stage === 'QUARTER_FINALS' ? rQF
+              : rSF
+            const count = expectedL[stage]
+            const prevCount = i > 0 ? expectedL[rightStages[i - 1]] : 1
+            return (
+              <span key={stage} className="contents">
+                <Connector left={prevCount} right={count} />
+                <Column matches={data} count={count} />
+              </span>
+            )
+          })}
+        </div>
       </div>
     </div>
   )
