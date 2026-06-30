@@ -6,11 +6,11 @@ import { flagUrl } from '@/lib/flags'
 import { useLanguage, TKey } from '@/lib/i18n'
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const CARD_W   = 136   // px, width of each match card
-const CARD_H   = 52    // px, height of each match card (two rows)
-const SLOT     = 72    // px, slot height for R32 (8 matches per side)
+const CARD_W   = 150   // px, width of each match card
+const CARD_H   = 80    // px, height of each match card (two side-by-side teams)
+const SLOT     = 96    // px, slot height for R32 (8 matches per side)
 const SLOTS    = 8     // matches per side in R32
-const H        = SLOT * SLOTS  // 576px total bracket height
+const H        = SLOT * SLOTS  // 768px total bracket height
 const CONN_W   = 28    // px, width of SVG connector strips
 
 const STAGE_KEYS: Record<string, TKey> = {
@@ -22,14 +22,28 @@ const STAGE_KEYS: Record<string, TKey> = {
   FINAL:         'bracket_final',
 }
 
-// ── Pending node: small round placeholder for matches with no teams decided yet ──
+// ── Pending node: same card structure, empty, for matches with no teams decided yet ──
 function PendingNode() {
   const { t } = useLanguage()
-  return (
-    <div className="flex items-center justify-center flex-shrink-0" style={{ width: CARD_W, height: CARD_H }}>
-      <div className="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center">
-        <span className="text-[7px] text-white/25 uppercase tracking-widest leading-none">{t('bracket_tbd')}</span>
+
+  function EmptyCol() {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-1 py-2 min-w-0">
+        <span className="w-6 h-[17px] border border-white/10 rounded-[1px] flex-shrink-0" />
+        <span className="text-[10px] font-black uppercase tracking-wide text-white/20">{t('bracket_tbd')}</span>
+        <span className="text-xs font-black tabular-nums leading-none text-white/15">–</span>
       </div>
+    )
+  }
+
+  return (
+    <div
+      className="border border-white/10 overflow-hidden flex-shrink-0 flex"
+      style={{ width: CARD_W, height: CARD_H }}
+    >
+      <EmptyCol />
+      <div className="border-l border-white/10" />
+      <EmptyCol />
     </div>
   )
 }
@@ -46,39 +60,32 @@ function BracketCard({ match }: { match: Match | null }) {
   const homeWon    = match.score.winner === 'HOME_TEAM'
   const awayWon    = match.score.winner === 'AWAY_TEAM'
 
-  function TeamRow({ tla, score, won }: { tla: string | null; score: number | null; won: boolean }) {
-    const flag = tla ? flagUrl(tla, 20) : null
+  function TeamCol({ tla, score, won }: { tla: string | null; score: number | null; won: boolean }) {
+    const flag = tla ? flagUrl(tla, 40) : null
     return (
-      <div
-        className={`flex items-center justify-between px-2 gap-1.5 ${won ? 'bg-white/10' : ''}`}
-        style={{ height: CARD_H / 2 }}
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
-          {flag
-            ? <Image src={flag} alt={tla!} width={16} height={11} className="object-cover flex-shrink-0" unoptimized />
-            : <span className="w-4 h-2.5 border border-white/20 flex-shrink-0 rounded-[1px]" />
-          }
-          <span className={`text-[10px] font-black uppercase tracking-wide truncate ${won ? 'text-white' : 'text-white/55'}`}>
-            {tla ?? t('bracket_tbd')}
-          </span>
-        </div>
-        {isFinished && score !== null && (
-          <span className={`text-[10px] font-black tabular-nums flex-shrink-0 ${won ? 'text-white' : 'text-white/25'}`}>
-            {score}
-          </span>
-        )}
+      <div className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 min-w-0 ${won ? 'bg-white/10' : ''}`}>
+        {flag
+          ? <Image src={flag} alt={tla!} width={24} height={17} className="object-cover shadow-sm flex-shrink-0" unoptimized />
+          : <span className="w-6 h-[17px] border border-white/20 rounded-[1px] flex-shrink-0" />
+        }
+        <span className={`text-[10px] font-black uppercase tracking-wide truncate max-w-full ${won ? 'text-white' : 'text-white/50'}`}>
+          {tla ?? t('bracket_tbd')}
+        </span>
+        <span className={`text-xs font-black tabular-nums leading-none ${won ? 'text-white' : 'text-white/25'}`}>
+          {isFinished && score !== null ? score : '–'}
+        </span>
       </div>
     )
   }
 
   return (
     <div
-      className="border border-white/20 overflow-hidden flex-shrink-0"
+      className="border border-white/20 overflow-hidden flex-shrink-0 flex"
       style={{ width: CARD_W, height: CARD_H }}
     >
-      <TeamRow tla={match.homeTeam.tla} score={match.score.fullTime.home} won={homeWon} />
-      <div className="border-t border-white/10" />
-      <TeamRow tla={match.awayTeam.tla} score={match.score.fullTime.away} won={awayWon} />
+      <TeamCol tla={match.homeTeam.tla} score={match.score.fullTime.home} won={homeWon} />
+      <div className="border-l border-white/10" />
+      <TeamCol tla={match.awayTeam.tla} score={match.score.fullTime.away} won={awayWon} />
     </div>
   )
 }
