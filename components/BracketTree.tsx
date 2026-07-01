@@ -278,15 +278,83 @@ export default function BracketTree({ matches }: Props) {
   const fin  = byStage('FINAL')[0] ?? null
   const trd  = byStage('THIRD_PLACE')[0] ?? null
 
-  function half<T>(arr: T[]): [T[], T[]] {
-    const mid = Math.ceil(arr.length / 2)
-    return [arr.slice(0, mid), arr.slice(mid)]
+  // R32: first half = left bracket, second half = right bracket (API assigns IDs in bracket order)
+  const mid32 = Math.ceil(r32.length / 2)
+  const lR32  = r32.slice(0, mid32)
+  const rR32  = r32.slice(mid32)
+
+  // Adjacent R32 pairs (by bracket position) feed the corresponding R16 slot.
+  // lPairs[j] = (lR32[2j], lR32[2j+1]) → lR16[j]
+  // rPairs[j] = (rR32[2j], rR32[2j+1]) → rR16[j]
+  const lPairs = Array.from({ length: 4 }, (_, i): [Match | null, Match | null] =>
+    [lR32[i * 2] ?? null, lR32[i * 2 + 1] ?? null])
+  const rPairs = Array.from({ length: 4 }, (_, i): [Match | null, Match | null] =>
+    [rR32[i * 2] ?? null, rR32[i * 2 + 1] ?? null])
+
+  // The football-data API assigns R16 IDs in bracket order: L0, L1, R0, R1, L2, L3, R2, R3
+  // giving a repeating L,L,R,R,L,L,R,R pattern by index position.
+  // Verified: 537375=PAR/FRA(L0), 537376=CAN/MAR(L1), 537377=BRA/NOR(R0)
+  function r32Winner(m: Match | null): Match['homeTeam'] | null {
+    if (!m || m.status !== 'FINISHED') return null
+    if (m.score.winner === 'HOME_TEAM') return m.homeTeam
+    if (m.score.winner === 'AWAY_TEAM') return m.awayTeam
+    return null
   }
 
-  const [lR32, rR32] = half(r32)
-  const [lR16, rR16] = half(r16)
-  const [lQF,  rQF]  = half(qf)
-  const [lSF,  rSF]  = half(sf)
+  const lR16: Match[] = [], rR16: Match[] = []
+  let lj = 0, rj = 0
+  for (let i = 0; i < r16.length; i++) {
+    const isRight = (i % 4) >= 2
+    const pair    = isRight ? rPairs[rj] : lPairs[lj]
+    let   match   = r16[i]
+
+    // Inject confirmed R32 winner into ???/??? slots so they appear in R16
+    if (pair && !match.homeTeam.tla && !match.awayTeam.tla) {
+      const winA = r32Winner(pair[0])
+      const winB = r32Winner(pair[1])
+      if (winA || winB) {
+        match = {
+          ...match,
+          homeTeam: winA ?? match.homeTeam,
+          awayTeam: winB ?? match.awayTeam,
+        }
+      }
+    }
+
+    if (isRight) { rR16.push(match); rj++ }
+    else         { lR16.push(match); lj++ }
+  }
+
+  // Build rTeams set for QF/SF splits (cascade right-bracket team identity through rounds)
+  const rTeams = new Set<string>()
+  for (const m of [...rR32, ...rR16]) {
+    if (m.homeTeam.tla) rTeams.add(m.homeTeam.tla)
+    if (m.awayTeam.tla) rTeams.add(m.awayTeam.tla)
+  }
+
+  function smartSplit(arr: Match[], target: number): [Match[], Match[]] {
+    const left: Match[] = [], right: Match[] = [], unknown: Match[] = []
+    for (const m of arr) {
+      const inRight = (m.homeTeam.tla && rTeams.has(m.homeTeam.tla)) ||
+                      (m.awayTeam.tla && rTeams.has(m.awayTeam.tla))
+      if (inRight)                               right.push(m)
+      else if (m.homeTeam.tla || m.awayTeam.tla) left.push(m)
+      else                                       unknown.push(m)
+    }
+    for (const m of unknown) {
+      if (left.length < target) left.push(m)
+      else right.push(m)
+    }
+    return [left, right]
+  }
+
+  const [lQF, rQF] = smartSplit(qf, 2)
+  for (const m of rQF) {
+    if (m.homeTeam.tla) rTeams.add(m.homeTeam.tla)
+    if (m.awayTeam.tla) rTeams.add(m.awayTeam.tla)
+  }
+
+  const [lSF, rSF] = smartSplit(sf, 1)
 
   const leftStages  = ['LAST_32','LAST_16','QUARTER_FINALS','SEMI_FINALS'].filter(s => byStage(s).length > 0)
   const rightStages = [...leftStages].reverse()
